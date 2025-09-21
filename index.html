@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>ניהול מושבים + CRM מתקדמת | מספור רץ, השחרה, הסרה, ייבוא/ייצוא וגרירה</title>
+  <link href="tailwind.min.css" rel="stylesheet">
+  <style>
+    /* ======================= עיצוב טבלה ======================= */
+    table { table-layout: fixed !important; border-collapse: collapse; }
+    th, td {
+      min-width: 60px !important; max-width: 60px !important; width: 60px !important;
+      height: 36px !important; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; text-align: center; vertical-align: middle;
+      font-variant-numeric: tabular-nums; padding: 0;
+      border: 1px solid #bbb !important;
+      background: #fff;
+      transition: background 0.13s;
+    }
+    td.cell-btn { cursor: pointer; }
+    td.cell-btn:hover { background: #e7f5ff !important; }
+    td.selected-range { background: #b8e7fa !important; }
+    td.selected-for-black, td.selected-for-unblack { outline: 2.5px solid #faad1b !important; z-index: 5; }
+    td.cell-blacked { background: #191919 !important; }
+    .split-cell {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column; pointer-events: none;
+    }
+    .split-cell-part {
+      flex: 1 1 0%; min-height: 0; min-width: 0; width: 100%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: inherit; pointer-events: none; overflow: hidden; font-weight: bold;
+    }
+    .split-cell-part-bottom {
+      font-weight: normal; font-size: 0.98em; color: #2063c7;
+      word-break: break-word;
+    }
+    .split-divider {
+      height: 1px; width: 100%; background: #e4e4e4;
+      margin: 0; padding: 0; line-height: 0; pointer-events: none;
+    }
+    .blacked .split-cell-part,
+    .blacked .split-cell-part-bottom { color: #fff !important; }
+    .blacked { background: #191919 !important; }
+
+    /* ================= עיצוב סביבתי והדר ================= */
+    .grid-tables {
+      display: grid; grid-auto-flow: column; grid-gap: 60px;
+      justify-content: center; align-items: start;
+      width: max-content; min-width: 100vw; min-height: 75vh;
+      user-select: none; cursor: grab;
+    }
+    .grid-tables:active { cursor: grabbing; }
+    #zoomable { transition: transform 0.25s; will-change: transform; }
+    .zoom-btn {
+      background: #e2e8f0; color: #374151; border-radius: 9999px;
+      padding: 0.25em 1em; margin: 0 0.5em; font-size: 1.2em; font-weight: bold;
+      border: none; cursor: pointer; box-shadow: 0 1px 4px #aaa2;
+      transition: background 0.15s;
+    }
+    .zoom-btn:hover { background: #b3e1ff; }
+    .admin-btn {
+      background: #ffeab5; color: #9d5600; border-radius: 9999px;
+      padding: 0.22em 1.1em; margin: 0 0.5em; font-size: 1.07em; font-weight: bold;
+      border: none; cursor: pointer; box-shadow: 0 1px 4px #aaa2;
+      transition: background 0.13s, color 0.13s;
+    }
+    .admin-btn.active { background: #fdbf2d; color: #672900; }
+    body, html { overflow: hidden; }
+    main { height: 92vh; overflow: hidden; }
+
+    /* ================= CRM ================ */
+    #crmSidebar {
+      position: fixed; top: 0; right: 0; height: 100vh; z-index: 200;
+      width: 380px; min-width: 170px; max-width: 90vw;
+      background: #f8fafc;
+      box-shadow: -3px 0 20px #0002;
+      border-left: 2.5px solid #bcd;
+      transition: width 0.18s cubic-bezier(.23,1.03,.64,.96), transform 0.23s, right 0.15s;
+      display: none;
+      overflow: hidden;
+      direction: rtl;
+    }
+    #crmSidebar.open { display: block; }
+    #crmSidebar.minimized { width: 48px !important; min-width: 48px !important; }
+    .crm-header {
+      display: flex; align-items: center; padding: 0.6em 1em 0.4em 0.3em; border-bottom: 1.5px solid #e6e6ee;
+      background: #f1f5fa;
+    }
+    .crm-title { font-size: 1.26em; font-weight: bold; color: #235cc4; flex: 1; }
+    .crm-close, .crm-min { background: none; border: none; cursor: pointer; font-size: 1.35em; color: #678; margin-right: 10px; }
+    .crm-close:hover, .crm-min:hover { color: #e53e3e; }
+    .crm-search { margin: 12px 18px; width: 90%; padding: 6px 12px; border: 1.5px solid #bcd; border-radius: 9px; font-size: 1em;}
+    .crm-table { width: 100%; font-size: 0.98em; border-collapse: collapse; }
+    .crm-table thead th { background: #e6f1fc; font-weight: bold; border-bottom: 1.5px solid #bcd; padding: 6px; }
+    .crm-table td { padding: 4px 3px; border-bottom: 1px solid #ecf3fa; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+    .crm-table tr { transition: background 0.11s; }
+    .crm-table tr:hover { background: #e3f4fd; }
+    .crm-empty { padding: 2em 0; color: #666; text-align: center; font-size: 1.12em; }
+    .crm-dragger { position: absolute; left: -5px; top: 0; bottom: 0; width: 10px; cursor: ew-resize; z-index: 400; }
+    .crm-import { margin: 0 0 0 10px; }
+    .crm-table tr.dragging { background: #bbe4ff !important; opacity: 0.7; }
+    .drag-over { outline: 3px solid #fdcf49 !important; }
+    @media(max-width:620px){
+      #crmSidebar { width: 96vw; min-width: 96vw; }
+    }
+
+    /* ============= מודלים - כרטיסיה וטפסים ============= */
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.12); z-index: 500;
+      display: flex; align-items: center; justify-content: center; animation: fadein 0.15s; }
+    @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+    .modal-card {
+      min-width: 300px; max-width: 95vw; background: #fff; border-radius: 18px;
+      box-shadow: 0 8px 32px #0002; padding: 30px 28px 18px 28px; z-index: 60;
+      direction: rtl; display: flex; flex-direction: column; gap: 1.5em;
+      position: relative; animation: pop 0.14s;
+    }
+    @keyframes pop { from { transform: scale(0.92); opacity: 0.5; } to { transform: scale(1); opacity: 1; } }
+    .modal-close-btn {
+      position: absolute; left: 10px; top: 7px; color: #4299e1;
+      font-size: 1.8em; background: none; border: none; cursor: pointer;
+      line-height: 1; z-index: 10; transition: color 0.1s;
+    }
+    .modal-close-btn:hover { color: #e53e3e; }
+    .modal-section-title {
+      font-weight: bold; font-size: 1.12em; margin-bottom: 0.25em; color: #2854ad;
+    }
+    .modal-card label { font-weight: bold; font-size: 1.05em; }
+    .modal-card input, .modal-card textarea {
+      border: 1px solid #d4d4d4; border-radius: 7px; width: 100%; padding: 6px 10px; margin-top: 3px;
+      font-size: 1em; background: #f7fafc; outline: none; transition: border 0.18s;
+    }
+    .modal-card input:focus, .modal-card textarea:focus { border-color: #4299e1; }
+    /* חלון מספור רץ */
+    .modal-run-num { text-align: center; padding: 2em 1em 1em 1em; }
+    .modal-run-num input {
+      font-size: 1.13em; border: 1.5px solid #ffba08; border-radius: 9px; width: 120px; text-align: center;
+    }
+    .modal-run-num button {
+      background: #fdbf2d; color: #672900; border-radius: 14px; font-weight: bold; margin-top: 1.2em;
+      font-size: 1.08em; padding: 7px 38px; border: none; cursor: pointer; transition: background 0.15s;
+    }
+    .modal-run-num button:hover { background: #ffe07b; }
+    .modal-run-num label { font-size: 1.05em; font-weight: bold; margin-left: 0.5em; }
+    .modal-run-num .desc { font-size: 0.97em; color: #715000; margin: 0.6em 0 0.6em 0; }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+
+  <!-- ======= CRM Sidebar - ממשק צד נפתח ======= -->
+  <div id="crmSidebar" style="display:none">
+    <div class="crm-dragger" onmousedown="crmStartResize(event)"></div>
+    <div class="crm-header">
+      <span class="crm-title">רשימת בחורים לשיבוץ (CRM)</span>
+      <button class="crm-min" title="מזער" onclick="toggleCrmSidebar(false)">&#9776;</button>
+      <button class="crm-close" title="סגור" onclick="toggleCrmSidebar(false)">×</button>
+    </div>
+    <input id="crmSearch" class="crm-search" type="text" placeholder="חיפוש בכל העמודות..." oninput="renderCrmTable()" autocomplete="off" />
+    <div style="margin:0 16px 6px 0;display:flex;gap:10px;align-items:center;">
+      <input type="file" id="crmImportFile" class="crm-import" accept=".csv,.txt,.xls,.xlsx" style="display:none" onchange="crmImportFile(this)">
+      <button class="zoom-btn" style="font-size:1em;padding:2px 20px;" onclick="document.getElementById('crmImportFile').click()">ייבוא קובץ</button>
+      <span style="color:#667;text-align:left;font-size:0.98em;">גרור לכאן קובץ או בחור למושב!</span>
+    </div>
+    <div id="crmTableWrap" style="height:63vh;overflow:auto;margin:6px 9px 10px 0;border-radius:9px;background:#fff;box-shadow:0 1.5px 8px #aee2;"></div>
+  </div>
+
+  <!-- ======= כותרת ואיזור שליטה ======= -->
+  <header class="bg-blue-600 text-white p-4 text-center rounded-b-xl shadow-md mb-8 flex flex-col items-center">
+    <h1 class="text-3xl font-bold mb-3">5 טבלאות – ניהול מושבים מתקדם</h1>
+    <div class="flex items-center mb-1">
+      <button class="zoom-btn" onclick="zoomOut()" title="הקטן">−</button>
+      <span class="text-lg mx-2" id="zoom-level">100%</span>
+      <button class="zoom-btn" onclick="zoomIn()" title="הגדל">+</button>
+      <button id="adminBtn" class="admin-btn ml-6" onclick="toggleAdminMode()" title="מצב עריכת מספור">מצב עריכת מפה</button>
+      <button id="crmOpenBtn" class="zoom-btn" style="background:#dbeafe;color:#1d4ed8;font-size:1.1em;font-weight:bold;" onclick="toggleCrmSidebar(true)" title="פתח CRM">📋 CRM</button>
+      <button id="blackoutBtn" class="zoom-btn" style="display:none" onclick="toggleBlackoutMode()">השחרת מקום</button>
+      <button id="doBlackoutBtn" class="zoom-btn" style="display:none" onclick="blackoutSelected()">בצע השחרה</button>
+      <button id="unblackoutBtn" class="zoom-btn" style="display:none" onclick="toggleUnblackoutMode()">הסר השחרה</button>
+      <button id="doUnblackoutBtn" class="zoom-btn" style="display:none" onclick="unblackoutSelected()">בצע הסרת השחרה</button>
+      <input type="file" id="importFile" accept=".txt,.csv" style="display:none" />
+      <button id="importBtn" class="zoom-btn" onclick="document.getElementById('importFile').click()">ייבוא שמות מקובץ</button>
+      <button id="exportBtn" class="zoom-btn" onclick="exportToFile()">ייצוא שמות לקובץ</button>
+    </div>
+    <span class="text-sm text-gray-200">בלחיצה: ניהול מושב/משתמש. במצב מנהל: מספור אוטומטי, השחרה/הסרת השחרה, ייבוא/ייצוא, CRM וגרירה למושבים.</span>
+  </header>
+
+  <!-- ======= איזור הטבלאות ======= -->
+  <main class="p-4">
+    <div id="pan-outer" style="overflow:auto; width:100vw; height:calc(92vh - 56px);">
+      <div id="zoomable" style="width:max-content;">
+        <div class="grid-tables" id="tables-container"></div>
+        <div style="height:200px;"></div>
+      </div>
+    </div>
+  </main>
+  <div id="modal-area"></div>
+
+  <!-- ======= סקריפט מלא ======= -->
+  <script>
+    // ================= הגדרות ראשיות =================
+    const tablesMeta = [
+      { title: "טור 5000", color: "text-blue-700", cols: 6 },
+      { title: "טור 4000", color: "text-green-700", cols: 12 },
+      { title: "טור 3000", color: "text-purple-700", cols: 12 },
+      { title: "טור 2000", color: "text-orange-700", cols: 12 },
+      { title: "טור 1000", color: "text-red-700", cols: 7 }
+    ];
+    const numRows = 31, cellWidth = 60, cellHeight = 36;
+    const cellData = {};
+    const blackedCells = {};
+    let adminMode = false, firstSelected = null, lastSelected = null;
+    let selectedForBlackout = new Set();
+    let selectedForUnblackout = new Set();
+
+    // ================== ייבוא שמות מקובץ ==================
+    document.getElementById('importFile').addEventListener('change', function(e){
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt){ importNamesFromText(evt.target.result); };
+      reader.readAsText(file, "utf-8");
+      e.target.value = '';
+    });
+
+    // ================== אירועי קליק ==================
+    document.addEventListener('click', function(e) {
+      const cell = e.target.closest('td.cell-btn');
+      if (!cell) return;
+      const cellId = cell.dataset.cellid;
+      if (blackedCells[cellId] && !adminMode) return; // תא מושחר לא נפתח במצב רגיל
+      if (adminMode) {
+        handleAdminCellClick(cellId);
+      } else {
+        showModal(cellId);
+      }
+    });
+
+    // סגירת טופס/מודל בכל לחיצה על הרקע או האיקס
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('modal-bg') || e.target.classList.contains('modal-close-btn')) {
+        closeModal();
+      }
+    });
+
+    // ================== בניית טבלאות ==================
+
+    function buildColgroup(cols) {
+      return `<colgroup>${Array.from({length: cols}).map(()=>`<col style="width:${cellWidth}px;">`).join('')}</colgroup>`;
+    }
+
+    function buildTableHeaders(cols) {
+      let tds = "";
+      for (let i = 1; i <= cols; i++) tds += `<th class="border">${i}</th>`;
+      return `<thead><tr>${tds}</tr></thead>`;
+    }
+
+    // תא מפוצל: מספר מושב למעלה + שם בחור למטה
+    function buildSplitCell(cellId) {
+      const data = cellData[cellId] || {};
+      const isBlacked = blackedCells[cellId];
+
+      return `
+        <div class="split-cell${isBlacked ? ' blacked' : ''}" data-cellid="${cellId}">
+          <div class="split-cell-part${isBlacked ? ' blacked-text' : ''}">
+            ${data.seatNum ? data.seatNum : ""}
+          </div>
+          <div class="split-divider"></div>
+          <div class="split-cell-part split-cell-part-bottom${isBlacked ? ' blacked-text' : ''}">
+            ${data.name ? data.name : ""}
+          </div>
+        </div>
+      `;
+    }
+
+    // בניית שורות הטבלה עם תמיכה ב-Drag & Drop
+    function buildTableRows(cols, tableIndex) {
+      let trs = "";
+      for (let row = 1; row <= numRows; row++) {
+        let tds = "";
+        for (let col = cols; col >= 1; col--) {
+          let cellId = `t${tableIndex}_r${row}_c${col}`;
+          let classes = "border cell-btn";
+          if (adminMode && isCellInSelectedRange(cellId)) classes += " selected-range";
+          if (selectedForBlackout.has(cellId)) classes += " selected-for-black";
+          if (selectedForUnblackout.has(cellId)) classes += " selected-for-unblack";
+          if (blackedCells[cellId]) classes += " cell-blacked";
+          // תמיכה ב-Drag & Drop
+          tds += `<td class="${classes}" data-cellid="${cellId}"
+                    ondragover="seatDragOver(event, '${cellId}')"
+                    ondrop="seatDrop(event, '${cellId}')"
+                    ondragleave="seatDragLeave(event, '${cellId}')"
+                  >${buildSplitCell(cellId)}</td>`;
+        }
+        trs += `<tr>${tds}</tr>`;
+      }
+      return `<tbody>${trs}</tbody>`;
+    }
+
+    function buildTableHtml({title, color, cols}, tableIndex) {
+      return `
+      <div class="bg-white rounded-xl shadow p-3 flex flex-col items-center">
+        <h2 class="font-bold ${color} mb-2 text-lg text-center">${title} </h2>
+        <div style="overflow-x:auto;">
+          <table class="border border-gray-300 text-xs mx-auto" dir="rtl">
+            ${buildColgroup(cols)}
+            ${buildTableHeaders(cols)}
+            ${buildTableRows(cols, tableIndex)}
+          </table>
+        </div>
+      </div>
+      `;
+    }
+
+    function renderTables() {
+      document.getElementById("tables-container").innerHTML =
+        tablesMeta.map(buildTableHtml).join('');
+      // שליטה על כפתורים
+      const doBlackBtn = document.getElementById('doBlackoutBtn');
+      if (adminMode && document.getElementById('blackoutBtn').classList.contains('active') && selectedForBlackout.size > 0) {
+        doBlackBtn.style.display = '';
+      } else {
+        doBlackBtn.style.display = 'none';
+      }
+      const doUnblackBtn = document.getElementById('doUnblackoutBtn');
+      if (adminMode && document.getElementById('unblackoutBtn').classList.contains('active') && selectedForUnblackout.size > 0) {
+        doUnblackBtn.style.display = '';
+      } else {
+        doUnblackBtn.style.display = 'none';
+      }
+    }
+
+    // ================== פונקציות זום ==================
+    let zoom = 1.0;
+    function applyZoom() {
+      document.getElementById("zoomable").style.transform = `scale(${zoom})`;
+      document.getElementById("zoom-level").innerText = Math.round(zoom*100) + "%";
+    }
+    function zoomIn()  { if (zoom < 2.2) { zoom += 0.1; zoom = Math.round(zoom*10)/10; applyZoom(); } }
+    function zoomOut() { if (zoom > 0.3) { zoom -= 0.1; zoom = Math.round(zoom*10)/10; applyZoom(); } }
+
+    // ================== גרירה/פאנינג ==================
+    const panOuter = document.getElementById('pan-outer');
+    let isDragging = false, lastX = 0, lastY = 0, scrollLeft = 0, scrollTop = 0;
+    panOuter.addEventListener('mousedown', function(e) {
+      isDragging = true; panOuter.style.cursor = 'grabbing';
+      lastX = e.clientX; lastY = e.clientY;
+      scrollLeft = panOuter.scrollLeft; scrollTop = panOuter.scrollTop;
+    });
+    window.addEventListener('mousemove', function(e) {
+      if (!isDragging) return;
+      panOuter.scrollLeft = scrollLeft + (lastX - e.clientX);
+      panOuter.scrollTop  = scrollTop  + (lastY - e.clientY);
+    });
+    window.addEventListener('mouseup', function(e) {
+      isDragging = false; panOuter.style.cursor = 'grab';
+    });
+    panOuter.addEventListener('touchstart', function(e) {
+      isDragging = true;
+      lastX = e.touches[0].clientX;
+      lastY = e.touches[0].clientY;
+      scrollLeft = panOuter.scrollLeft;
+      scrollTop = panOuter.scrollTop;
+    }, {passive:false});
+    panOuter.addEventListener('touchmove', function(e) {
+      if (!isDragging) return;
+      panOuter.scrollLeft = scrollLeft + (lastX - e.touches[0].clientX);
+      panOuter.scrollTop  = scrollTop  + (lastY - e.touches[0].clientY);
+    }, {passive:false});
+    panOuter.addEventListener('touchend', function(e) {
+      isDragging = false;
+    }, {passive:false});
+
+    // =================== בחירת תאים: השחרה, מספור וכו' ===================
+    function handleAdminCellClick(cellId) {
+      // מצב השחרה
+      if (document.getElementById('blackoutBtn').classList.contains('active')) {
+        if (selectedForBlackout.has(cellId)) {
+          selectedForBlackout.delete(cellId);
+        } else {
+          selectedForBlackout.add(cellId);
+        }
+        renderTables();
+        return;
+      }
+      // מצב הסרת השחרה
+      if (document.getElementById('unblackoutBtn').classList.contains('active')) {
+        if (!blackedCells[cellId]) return; // רק מושחרים!
+        if (selectedForUnblackout.has(cellId)) {
+          selectedForUnblackout.delete(cellId);
+        } else {
+          selectedForUnblackout.add(cellId);
+        }
+        renderTables();
+        return;
+      }
+      // מספור רץ רגיל
+      if (!firstSelected) {
+        firstSelected = cellId;
+        lastSelected = null;
+      } else if (!lastSelected) {
+        lastSelected = cellId;
+        showRunNumModal();
+      } else {
+        firstSelected = cellId;
+        lastSelected = null;
+        renderTables();
+      }
+      renderTables();
+    }
+
+    function toggleAdminMode() {
+      adminMode = !adminMode;
+      document.getElementById('adminBtn').classList.toggle('active', adminMode);
+      document.getElementById('blackoutBtn').style.display = adminMode ? '' : 'none';
+      document.getElementById('unblackoutBtn').style.display = adminMode ? '' : 'none';
+      firstSelected = null; lastSelected = null;
+      selectedForBlackout.clear();
+      selectedForUnblackout.clear();
+      closeModal();
+      renderTables();
+    }
+    function toggleBlackoutMode() {
+      const btn = document.getElementById('blackoutBtn');
+      btn.classList.toggle('active');
+      document.getElementById('unblackoutBtn').classList.remove('active');
+      selectedForBlackout.clear();
+      selectedForUnblackout.clear();
+      renderTables();
+    }
+    function blackoutSelected() {
+      if (!adminMode || selectedForBlackout.size == 0) return;
+      selectedForBlackout.forEach(cellId => {
+        blackedCells[cellId] = true;
+      });
+      saveToStorage();
+      selectedForBlackout.clear();
+      document.getElementById('blackoutBtn').classList.remove('active');
+      renderTables();
+    }
+    function toggleUnblackoutMode() {
+      const btn = document.getElementById('unblackoutBtn');
+      btn.classList.toggle('active');
+      document.getElementById('blackoutBtn').classList.remove('active');
+      selectedForBlackout.clear();
+      selectedForUnblackout.clear();
+      renderTables();
+    }
+    function unblackoutSelected() {
+      if (!adminMode || selectedForUnblackout.size == 0) return;
+      selectedForUnblackout.forEach(cellId => {
+        delete blackedCells[cellId];
+      });
+      saveToStorage();
+      selectedForUnblackout.clear();
+      document.getElementById('unblackoutBtn').classList.remove('active');
+      renderTables();
+    }
+
+    // ================== מספור רץ ==================
+    function isCellInSelectedRange(cellId) {
+      if (!firstSelected || !lastSelected) return false;
+      const allIds = getAllCellIds();
+      const idx1 = allIds.indexOf(firstSelected);
+      const idx2 = allIds.indexOf(lastSelected);
+      if (idx1 < 0 || idx2 < 0) return false;
+      const from = Math.min(idx1, idx2), to = Math.max(idx1, idx2);
+      const myIdx = allIds.indexOf(cellId);
+      return myIdx >= from && myIdx <= to;
+    }
+    function getAllCellIds() {
+      const ids = [];
+      tablesMeta.forEach((meta, tIdx) => {
+        for (let r = 1; r <= numRows; r++) {
+          for (let c = 1; c <= meta.cols; c++) {
+            ids.push(`t${tIdx}_r${r}_c${c}`);
+          }
+        }
+      });
+      return ids;
+    }
+    function showRunNumModal() {
+      document.getElementById('modal-area').innerHTML = `
+        <div class="modal-bg">
+          <form class="modal-card modal-run-num" onsubmit="event.preventDefault();applyRunNum();">
+            <button type="button" class="modal-close-btn" title="סגור">&times;</button>
+            <div style="font-size:1.18em;font-weight:bold;color:#ba8405;">מספור רץ</div>
+            <div class="desc">הזן מספר התחלתי. כל התאים שבין הבחירה הראשונה לשנייה יקבלו מספור אוטומטי לפי הסדר.</div>
+            <label>מספר התחלתי:</label>
+            <input type="number" id="runNumStart" min="1" style="direction:ltr;" required autofocus />
+            <button type="submit">אישור מספור</button>
+          </form>
+        </div>
+      `;
+      setTimeout(()=>{document.getElementById('runNumStart').focus()},150);
+    }
+    function applyRunNum() {
+      const start = parseInt(document.getElementById('runNumStart').value,10);
+      if (isNaN(start)) return;
+      const allIds = getAllCellIds();
+      const idx1 = allIds.indexOf(firstSelected), idx2 = allIds.indexOf(lastSelected);
+      if (idx1 < 0 || idx2 < 0) return;
+      const from = Math.min(idx1, idx2), to = Math.max(idx1, idx2);
+      let num = start;
+      for (let i = from; i <= to; i++) {
+        const cid = allIds[i];
+        if (!cellData[cid]) cellData[cid] = {};
+        cellData[cid].seatNum = num++;
+      }
+      closeModal();
+      saveToStorage();
+      firstSelected = lastSelected = null;
+      renderTables();
+    }
+
+    // ================== טופס עריכת מושב ==================
+    function showModal(cellId) {
+      const data = cellData[cellId] || {};
+      document.getElementById('modal-area').innerHTML = `
+        <div class="modal-bg">
+          <form class="modal-card" onsubmit="event.preventDefault();saveModal('${cellId}');">
+            <button type="button" class="modal-close-btn" title="סגור">&times;</button>
+            <div class="modal-section-title">נתוני מושב</div>
+            <label>מספר מקום:</label>
+            <input type="text" id="seatNum" placeholder="לדוג' 27" autocomplete="off" value="${data.seatNum ? data.seatNum : ''}" ${!adminMode ? 'readonly' : ''} />
+            <div class="modal-section-title">נתוני משתמש</div>
+            <label>שם משתמש:</label>
+            <input type="text" id="userName" placeholder="שם מלא" autocomplete="off" value="${data.name ? data.name : ''}" />
+            <label>טלפון:</label>
+            <input type="tel" id="userPhone" placeholder="050-0000000" autocomplete="off" value="${data.phone ? data.phone : ''}" />
+            <label>הערה:</label>
+            <textarea id="userNote" rows="2" placeholder="הערה חופשית...">${data.note ? data.note : ''}</textarea>
+            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-5 py-2 rounded-xl mt-4">שמור וסגור</button>
+          </form>
+        </div>
+      `;
+    }
+    function saveModal(cellId) {
+      const seatNum = document.getElementById('seatNum').value.trim();
+      const name = document.getElementById('userName').value.trim();
+      const phone = document.getElementById('userPhone').value.trim();
+      const note = document.getElementById('userNote').value.trim();
+      cellData[cellId] = { seatNum, name, phone, note };
+      closeModal();
+      saveToStorage();
+      renderTables();
+      renderCrmTable(); // עדכון CRM
+    }
+    function closeModal() {
+      document.getElementById('modal-area').innerHTML = '';
+    }
+
+    // ================== שמירה/טעינה ל-LocalStorage ==================
+    function saveToStorage() {
+      localStorage.setItem('seatMapData', JSON.stringify(cellData));
+      localStorage.setItem('blackedCells', JSON.stringify([...Object.keys(blackedCells)]));
+    }
+    function loadFromStorage() {
+      const json = localStorage.getItem('seatMapData');
+      if (json) try { Object.assign(cellData, JSON.parse(json)); } catch(e){}
+      const blackJson = localStorage.getItem('blackedCells');
+      if (blackJson) {
+        JSON.parse(blackJson).forEach(cellId => { blackedCells[cellId] = true; });
+      }
+    }
+
+    // ================== ייבוא נתונים מקובץ TXT/CSV ==================
+    function importNamesFromText(txt) {
+      const map = {};
+      txt.split(/\r?\n/).forEach(line => {
+        if (!line.trim()) return;
+        const [num, rest] = line.split('=');
+        if (!num || !rest) return;
+        const [name, phone, note] = rest.split(',');
+        map[num.trim()] = {
+          name: (name||'').trim(),
+          phone: (phone||'').trim(),
+          note: (note||'').trim()
+        };
+      });
+      const allIds = getAllCellIds();
+      allIds.forEach(cellId => {
+        let d = cellData[cellId];
+        if (!d || !d.seatNum) return;
+        const val = map[d.seatNum];
+        if (val) {
+          if (!cellData[cellId]) cellData[cellId] = {};
+          cellData[cellId].name = val.name;
+          cellData[cellId].phone = val.phone;
+          cellData[cellId].note = val.note;
+        }
+      });
+      saveToStorage();
+      renderTables();
+      renderCrmTable();
+      alert('הייבוא בוצע בהצלחה!');
+    }
+
+    // ================== ייצוא נתונים לקובץ TXT ==================
+    function exportToFile() {
+      let rows = [];
+      const allIds = getAllCellIds();
+      allIds.forEach(cellId => {
+        const d = cellData[cellId];
+        if (d && d.seatNum) {
+          const name = d.name || '';
+          const phone = d.phone || '';
+          const note = d.note || '';
+          rows.push(`${d.seatNum}=${name},${phone},${note}`);
+        }
+      });
+      const txt = rows.join('\n');
+      const blob = new Blob([txt], {type: 'text/plain'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'seat_map_export.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // ================ CRM ממשק צד נפתח  ==================
+
+    let crmData = []; // מערך הבחורים ל-CRM
+    let crmSidebarOpen = false;
+    let crmSidebarWidth = 380, crmResizeActive = false, crmDragStartX = 0, crmDragStartWidth = 380;
+
+    function toggleCrmSidebar(show){
+      const sidebar = document.getElementById('crmSidebar');
+      crmSidebarOpen = !!show;
+      sidebar.classList.toggle('open', crmSidebarOpen);
+      sidebar.style.display = crmSidebarOpen ? 'block' : 'none';
+      if (crmSidebarOpen) {
+        renderCrmTable();
+        setTimeout(()=>{ document.getElementById('crmSearch').focus(); },250);
+      }
+    }
+
+    // שינוי רוחב הסרגל על ידי גרירה
+    function crmStartResize(e){
+      crmResizeActive = true;
+      crmDragStartX = e.clientX;
+      crmDragStartWidth = document.getElementById('crmSidebar').offsetWidth;
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', crmDoResize);
+      document.addEventListener('mouseup', crmStopResize);
+    }
+    function crmDoResize(e){
+      if (!crmResizeActive) return;
+      let newWidth = crmDragStartWidth - (crmDragStartX - e.clientX);
+      newWidth = Math.max(170, Math.min(newWidth, window.innerWidth-50));
+      document.getElementById('crmSidebar').style.width = newWidth + "px";
+    }
+    function crmStopResize(){
+      crmResizeActive = false;
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', crmDoResize);
+      document.removeEventListener('mouseup', crmStopResize);
+    }
+
+    // גרירת בחור מממשק CRM אל מושב
+    function crmRowDragStart(e, idx){
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData('application/json', JSON.stringify(crmData[idx]));
+      e.currentTarget.classList.add('dragging');
+    }
+    function crmRowDragEnd(e){
+      e.currentTarget.classList.remove('dragging');
+    }
+
+    // גרירה על מושב – אירועי drop (להכניס לתא)
+    window.seatDragOver = function(event, cellId){
+      event.preventDefault();
+      document.querySelectorAll(`[data-cellid="${cellId}"]`).forEach(td=>td.classList.add("drag-over"));
+    }
+    window.seatDragLeave = function(event, cellId){
+      document.querySelectorAll(`[data-cellid="${cellId}"]`).forEach(td=>td.classList.remove("drag-over"));
+    }
+    window.seatDrop = function(event, cellId){
+      event.preventDefault();
+      document.querySelectorAll(`[data-cellid="${cellId}"]`).forEach(td=>td.classList.remove("drag-over"));
+      let dataStr = event.dataTransfer.getData('application/json');
+      let rowData = null;
+      try { rowData = JSON.parse(dataStr); } catch{}
+      if (!rowData) return;
+      // עדכון מושב + עדכון CRM
+      const seatNum = getSeatNumForCellId(cellId);
+      cellData[cellId] = {
+        seatNum: seatNum,
+        name: rowData["שם"]||rowData["name"]||rowData["fullName"]||"",
+        phone: rowData["טלפון"]||rowData["phone"]||"",
+        note: rowData["הערה"]||rowData["note"]||""
+      };
+      saveToStorage();
+      renderTables();
+      renderCrmTable();
+    };
+
+    // עוזר – מקבל מספר מושב עדכני מתוך cellId
+    function getSeatNumForCellId(cellId){
+      if(cellData[cellId] && cellData[cellId].seatNum) return cellData[cellId].seatNum;
+      // דוג' t1_r12_c6 – בדוק אם יש מספר מושב אחר בתא זה
+      const match = cellId.match(/^t\d+_r(\d+)_c(\d+)$/);
+      if (!match) return '';
+      // אתה יכול להחליף את החישוב הבא למשהו אחר אם תרצה מספרים שונים
+      // כאן רק מחזיר "שורה_עמודה" לדוג' 12_6
+      return match[1] + "_" + match[2];
+    }
+
+    // =================== רינדור CRM ===================
+
+    function renderCrmTable(){
+      if (!crmSidebarOpen) return;
+      const wrap = document.getElementById('crmTableWrap');
+      if (!crmData.length) {
+        wrap.innerHTML = `<div class="crm-empty">אין בחורים לטעינה.<br>ייבא קובץ csv/טקסט.</div>`;
+        return;
+      }
+      // חיפוש
+      const q = (document.getElementById('crmSearch').value||'').trim();
+      let dataFiltered = crmData.filter(row => {
+        if (!q) return true;
+        return Object.values(row).some(v=> (v||"").toString().includes(q));
+      });
+      // טבלה
+      let thead = `<thead><tr>${Object.keys(crmData[0]).map(k=>`<th>${k}</th>`).join("")}</tr></thead>`;
+      let tbody = dataFiltered.map((row, idx) => `<tr
+          draggable="true"
+          ondragstart="crmRowDragStart(event,${idx})"
+          ondragend="crmRowDragEnd(event)"
+        >${Object.values(row).map(v=>`<td>${v||""}</td>`).join("")}</tr>`).join("");
+      wrap.innerHTML = `<table class="crm-table">${thead}<tbody>${tbody}</tbody></table>`;
+    }
+
+    // =================== ייבוא קובץ CRM ===================
+    function crmImportFile(input){
+      if (!input.files[0]) return;
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = function(evt){
+        let text = evt.target.result;
+        // תמיכה גם ב־CSV וגם ב־TXT
+        crmData = parseCsvToObjects(text);
+        renderCrmTable();
+      };
+      reader.readAsText(file, "utf-8");
+      input.value = '';
+    }
+
+    // פרסר CSV גמיש
+    function parseCsvToObjects(text){
+      const rows = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length);
+      if (!rows.length) return [];
+      const headers = rows[0].split(',').map(x=>x.trim());
+      return rows.slice(1).map(row=>{
+        const vals = row.split(',');
+        let obj = {};
+        headers.forEach((h,i)=>obj[h]=vals[i]?vals[i].trim():"");
+        return obj;
+      });
+    }
+
+    // ============== טעינה ראשונית ==============
+    loadFromStorage();
+    renderTables();
+    applyZoom();
+  </script>
+</body>
+</html>
