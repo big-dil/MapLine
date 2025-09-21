@@ -1,0 +1,418 @@
+/* ======================= עיצוב טבלה ======================= */
+table { 
+  table-layout: fixed !important; 
+  border-collapse: collapse; 
+}
+
+th, td {
+  min-width: 60px !important; 
+  max-width: 60px !important; 
+  width: 60px !important;
+  height: 36px !important; 
+  overflow: hidden; 
+  text-overflow: ellipsis;
+  white-space: nowrap; 
+  text-align: center; 
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums; 
+  padding: 0;
+  border: 1px solid #bbb !important;
+  background: #fff;
+  transition: background 0.13s;
+}
+
+td.cell-btn { 
+  cursor: pointer; 
+}
+
+td.cell-btn:hover { 
+  background: #e7f5ff !important; 
+}
+
+td.selected-range { 
+  background: #b8e7fa !important; 
+}
+
+td.selected-for-black, td.selected-for-unblack { 
+  outline: 2.5px solid #faad1b !important; 
+  z-index: 5; 
+}
+
+td.cell-blacked { 
+  background: #191919 !important; 
+}
+
+.split-cell {
+  width: 100%; 
+  height: 100%;
+  display: flex; 
+  flex-direction: column; 
+  pointer-events: none;
+}
+
+.split-cell-part {
+  flex: 1 1 0%; 
+  min-height: 0; 
+  min-width: 0; 
+  width: 100%;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  font-size: inherit; 
+  pointer-events: none; 
+  overflow: hidden; 
+  font-weight: bold;
+}
+
+.split-cell-part-bottom {
+  font-weight: normal; 
+  font-size: 0.98em; 
+  color: #2063c7;
+  word-break: break-word;
+}
+
+.split-divider {
+  height: 1px; 
+  width: 100%; 
+  background: #e4e4e4;
+  margin: 0; 
+  padding: 0; 
+  line-height: 0; 
+  pointer-events: none;
+}
+
+.blacked .split-cell-part,
+.blacked .split-cell-part-bottom { 
+  color: #fff !important; 
+}
+
+.blacked { 
+  background: #191919 !important; 
+}
+
+/* ================= עיצוב סביבתי והדר ================= */
+.grid-tables {
+  display: grid; 
+  grid-auto-flow: column; 
+  grid-gap: 60px;
+  justify-content: center; 
+  align-items: start;
+  width: max-content; 
+  min-width: 100vw; 
+  min-height: 75vh;
+  user-select: none; 
+  cursor: grab;
+}
+
+.grid-tables:active { 
+  cursor: grabbing; 
+}
+
+#zoomable { 
+  transition: transform 0.25s; 
+  will-change: transform; 
+}
+
+.zoom-btn {
+  background: #e2e8f0; 
+  color: #374151; 
+  border-radius: 9999px;
+  padding: 0.25em 1em; 
+  margin: 0 0.5em; 
+  font-size: 1.2em; 
+  font-weight: bold;
+  border: none; 
+  cursor: pointer; 
+  box-shadow: 0 1px 4px #aaa2;
+  transition: background 0.15s;
+}
+
+.zoom-btn:hover { 
+  background: #b3e1ff; 
+}
+
+.admin-btn {
+  background: #ffeab5; 
+  color: #9d5600; 
+  border-radius: 9999px;
+  padding: 0.22em 1.1em; 
+  margin: 0 0.5em; 
+  font-size: 1.07em; 
+  font-weight: bold;
+  border: none; 
+  cursor: pointer; 
+  box-shadow: 0 1px 4px #aaa2;
+  transition: background 0.13s, color 0.13s;
+}
+
+.admin-btn.active { 
+  background: #fdbf2d; 
+  color: #672900; 
+}
+
+body, html { 
+  overflow: hidden; 
+}
+
+main { 
+  height: 92vh; 
+  overflow: hidden; 
+}
+
+/* ================= CRM ================ */
+#crmSidebar {
+  position: fixed; 
+  top: 0; 
+  right: 0; 
+  height: 100vh; 
+  z-index: 200;
+  width: 380px; 
+  min-width: 170px; 
+  max-width: 90vw;
+  background: #f8fafc;
+  box-shadow: -3px 0 20px #0002;
+  border-left: 2.5px solid #bcd;
+  transition: width 0.18s cubic-bezier(.23,1.03,.64,.96), transform 0.23s, right 0.15s;
+  display: none;
+  overflow: hidden;
+  direction: rtl;
+}
+
+#crmSidebar.open { 
+  display: block; 
+}
+
+#crmSidebar.minimized { 
+  width: 48px !important; 
+  min-width: 48px !important; 
+}
+
+.crm-header {
+  display: flex; 
+  align-items: center; 
+  padding: 0.6em 1em 0.4em 0.3em; 
+  border-bottom: 1.5px solid #e6e6ee;
+  background: #f1f5fa;
+}
+
+.crm-title { 
+  font-size: 1.26em; 
+  font-weight: bold; 
+  color: #235cc4; 
+  flex: 1; 
+}
+
+.crm-close, .crm-min { 
+  background: none; 
+  border: none; 
+  cursor: pointer; 
+  font-size: 1.35em; 
+  color: #678; 
+  margin-right: 10px; 
+}
+
+.crm-close:hover, .crm-min:hover { 
+  color: #e53e3e; 
+}
+
+.crm-search { 
+  margin: 12px 18px; 
+  width: 90%; 
+  padding: 6px 12px; 
+  border: 1.5px solid #bcd; 
+  border-radius: 9px; 
+  font-size: 1em;
+}
+
+.crm-table { 
+  width: 100%; 
+  font-size: 0.98em; 
+  border-collapse: collapse; 
+}
+
+.crm-table thead th { 
+  background: #e6f1fc; 
+  font-weight: bold; 
+  border-bottom: 1.5px solid #bcd; 
+  padding: 6px; 
+}
+
+.crm-table td { 
+  padding: 4px 3px; 
+  border-bottom: 1px solid #ecf3fa; 
+  max-width: 130px; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+}
+
+.crm-table tr { 
+  transition: background 0.11s; 
+}
+
+.crm-table tr:hover { 
+  background: #e3f4fd; 
+}
+
+.crm-empty { 
+  padding: 2em 0; 
+  color: #666; 
+  text-align: center; 
+  font-size: 1.12em; 
+}
+
+.crm-dragger { 
+  position: absolute; 
+  left: -5px; 
+  top: 0; 
+  bottom: 0; 
+  width: 10px; 
+  cursor: ew-resize; 
+  z-index: 400; 
+}
+
+.crm-import { 
+  margin: 0 0 0 10px; 
+}
+
+.crm-table tr.dragging { 
+  background: #bbe4ff !important; 
+  opacity: 0.7; 
+}
+
+.drag-over { 
+  outline: 3px solid #fdcf49 !important; 
+}
+
+@media(max-width:620px){
+  #crmSidebar { 
+    width: 96vw; 
+    min-width: 96vw; 
+  }
+}
+
+/* ============= מודלים - כרטיסיה וטפסים ============= */
+.modal-bg { 
+  position: fixed; 
+  inset: 0; 
+  background: rgba(0,0,0,0.12); 
+  z-index: 500;
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  animation: fadein 0.15s; 
+}
+
+@keyframes fadein { 
+  from { opacity: 0; } 
+  to { opacity: 1; } 
+}
+
+.modal-card {
+  min-width: 300px; 
+  max-width: 95vw; 
+  background: #fff; 
+  border-radius: 18px;
+  box-shadow: 0 8px 32px #0002; 
+  padding: 30px 28px 18px 28px; 
+  z-index: 60;
+  direction: rtl; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 1.5em;
+  position: relative; 
+  animation: pop 0.14s;
+}
+
+@keyframes pop { 
+  from { transform: scale(0.92); opacity: 0.5; } 
+  to { transform: scale(1); opacity: 1; } 
+}
+
+.modal-close-btn {
+  position: absolute; 
+  left: 10px; 
+  top: 7px; 
+  color: #4299e1;
+  font-size: 1.8em; 
+  background: none; 
+  border: none; 
+  cursor: pointer;
+  line-height: 1; 
+  z-index: 10; 
+  transition: color 0.1s;
+}
+
+.modal-close-btn:hover { 
+  color: #e53e3e; 
+}
+
+.modal-section-title {
+  font-weight: bold; 
+  font-size: 1.12em; 
+  margin-bottom: 0.25em; 
+  color: #2854ad;
+}
+
+.modal-card label { 
+  font-weight: bold; 
+  font-size: 1.05em; 
+}
+
+.modal-card input, .modal-card textarea {
+  border: 1px solid #d4d4d4; 
+  border-radius: 7px; 
+  width: 100%; 
+  padding: 6px 10px; 
+  margin-top: 3px;
+  font-size: 1em; 
+  background: #f7fafc; 
+  outline: none; 
+  transition: border 0.18s;
+}
+
+.modal-card input:focus, .modal-card textarea:focus { 
+  border-color: #4299e1; 
+}
+
+/* חלון מספור רץ */
+.modal-run-num { 
+  text-align: center; 
+  padding: 2em 1em 1em 1em; 
+}
+
+.modal-run-num input {
+  font-size: 1.13em; 
+  border: 1.5px solid #ffba08; 
+  border-radius: 9px; 
+  width: 120px; 
+  text-align: center;
+}
+
+.modal-run-num button {
+  background: #fdbf2d; 
+  color: #672900; 
+  border-radius: 14px; 
+  font-weight: bold; 
+  margin-top: 1.2em;
+  font-size: 1.08em; 
+  padding: 7px 38px; 
+  border: none; 
+  cursor: pointer; 
+  transition: background 0.15s;
+}
+
+.modal-run-num button:hover { 
+  background: #ffe07b; 
+}
+
+.modal-run-num label { 
+  font-size: 1.05em; 
+  font-weight: bold; 
+  margin-left: 0.5em; 
+}
+
+.modal-run-num .desc { 
+  font-size: 0.97em; 
+  color: #715000; 
+  margin: 0.6em 0 0.6em 0; 
+}

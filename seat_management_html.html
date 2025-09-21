@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>ניהול מושבים + CRM מתקדמת | מספור רץ, השחרה, הסרה, ייבוא/ייצוא וגרירה</title>
+  <link href="tailwind.min.css" rel="stylesheet">
+  <link href="styles.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+
+  <!-- ======= CRM Sidebar - ממשק צד נפתח ======= -->
+  <div id="crmSidebar" style="display:none">
+    <div class="crm-dragger" onmousedown="crmStartResize(event)"></div>
+    <div class="crm-header">
+      <span class="crm-title">רשימת בחורים לשיבוץ (CRM)</span>
+      <button class="crm-min" title="מזער" onclick="toggleCrmSidebar(false)">&#9776;</button>
+      <button class="crm-close" title="סגור" onclick="toggleCrmSidebar(false)">×</button>
+    </div>
+    <input id="crmSearch" class="crm-search" type="text" placeholder="חיפוש בכל העמודות..." oninput="renderCrmTable()" autocomplete="off" />
+    <div style="margin:0 16px 6px 0;display:flex;gap:10px;align-items:center;">
+      <input type="file" id="crmImportFile" class="crm-import" accept=".csv,.txt,.xls,.xlsx" style="display:none" onchange="crmImportFile(this)">
+      <button class="zoom-btn" style="font-size:1em;padding:2px 20px;" onclick="document.getElementById('crmImportFile').click()">ייבוא קובץ</button>
+      <span style="color:#667;text-align:left;font-size:0.98em;">גרור לכאן קובץ או בחור למושב!</span>
+    </div>
+    <div id="crmTableWrap" style="height:63vh;overflow:auto;margin:6px 9px 10px 0;border-radius:9px;background:#fff;box-shadow:0 1.5px 8px #aee2;"></div>
+  </div>
+
+  <!-- ======= כותרת ואיזור שליטה ======= -->
+  <header class="bg-blue-600 text-white p-4 text-center rounded-b-xl shadow-md mb-8 flex flex-col items-center">
+    <h1 class="text-3xl font-bold mb-3">5 טבלאות – ניהול מושבים מתקדם</h1>
+    <div class="flex items-center mb-1">
+      <button class="zoom-btn" onclick="zoomOut()" title="הקטן">−</button>
+      <span class="text-lg mx-2" id="zoom-level">100%</span>
+      <button class="zoom-btn" onclick="zoomIn()" title="הגדל">+</button>
+      <button id="adminBtn" class="admin-btn ml-6" onclick="toggleAdminMode()" title="מצב עריכת מספור">מצב עריכת מפה</button>
+      <button id="crmOpenBtn" class="zoom-btn" style="background:#dbeafe;color:#1d4ed8;font-size:1.1em;font-weight:bold;" onclick="toggleCrmSidebar(true)" title="פתח CRM">📋 CRM</button>
+      <button id="blackoutBtn" class="zoom-btn" style="display:none" onclick="toggleBlackoutMode()">השחרת מקום</button>
+      <button id="doBlackoutBtn" class="zoom-btn" style="display:none" onclick="blackoutSelected()">בצע השחרה</button>
+      <button id="unblackoutBtn" class="zoom-btn" style="display:none" onclick="toggleUnblackoutMode()">הסר השחרה</button>
+      <button id="doUnblackoutBtn" class="zoom-btn" style="display:none" onclick="unblackoutSelected()">בצע הסרת השחרה</button>
+      <input type="file" id="importFile" accept=".txt,.csv" style="display:none" />
+      <button id="importBtn" class="zoom-btn" onclick="document.getElementById('importFile').click()">ייבוא שמות מקובץ</button>
+      <button id="exportBtn" class="zoom-btn" onclick="exportToFile()">ייצוא שמות לקובץ</button>
+    </div>
+    <span class="text-sm text-gray-200">בלחיצה: ניהול מושב/משתמש. במצב מנהל: מספור אוטומטי, השחרה/הסרת השחרה, ייבוא/ייצוא, CRM וגרירה למושבים.</span>
+  </header>
+
+  <!-- ======= איזור הטבלאות ======= -->
+  <main class="p-4">
+    <div id="pan-outer" style="overflow:auto; width:100vw; height:calc(92vh - 56px);">
+      <div id="zoomable" style="width:max-content;">
+        <div class="grid-tables" id="tables-container"></div>
+        <div style="height:200px;"></div>
+      </div>
+    </div>
+  </main>
+  <div id="modal-area"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
